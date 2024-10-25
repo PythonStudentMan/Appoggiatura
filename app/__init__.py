@@ -6,12 +6,15 @@ login_manager = LoginManager()
 db = SQLAlchemy()
 
 
-def create_app():
-    app = Flask(__name__)
-
-    app.config['SECRET_KEY'] = '7110c8ae51a4b5af97be6534caef90e4bb9bdcb3380af008f90b23a5d1616bf319bc298105da20fe'
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:testing@localhost:5432/miniblog'
-    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+def create_app(settings_module='config.development'):
+    app = Flask(__name__, instance_relative_config=True)
+    # Cargamos los parámetros de configuracion según el entorno
+    app.config.from_object(settings_module)
+    # Cargamos la configuración del directorio instance
+    if app.config.get('TESTING', False):
+        app.config.from_pyfile('config-testing.py', silent=True)
+    else:
+        app.config.from_pyfile('config.py', silent=True)
 
     login_manager.init_app(app)
     login_manager.login_view = "auth.login"
@@ -29,3 +32,8 @@ def create_app():
     app.register_blueprint(public_bp)
 
     return app
+
+
+@login_manager.user_loader
+def load_user(user_id):
+    return User.get_by_id(int(user_id))
